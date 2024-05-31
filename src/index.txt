@@ -1,0 +1,59 @@
+
+import {onRequest} from "firebase-functions/v2/https";
+import {Respuesta} from "./types";
+import {peticionOpenAi} from "./helpers/peticionOpenAi";
+// import axios from "axios";
+// import * as logger from "firebase-functions/logger";
+
+
+export const app = onRequest( async (req, res) => {
+  let result: Respuesta;
+
+  try {
+    if (req.method !== "POST") {
+      res.status(405).send("Method Not Allowed");
+      return;
+    }
+
+
+    const intent = req.body.queryResult.intent.displayName;
+    const query = req.body.queryResult.queryText;
+
+    if (intent === "PreguntasEspecificacionesFin") {
+      // Peticion a openai
+
+      const openaiResponseData = await peticionOpenAi(query);
+      // logger.info(`openaiResponseData: ${openaiResponseData}`);
+
+
+      result = {
+        fulfillmentText: openaiResponseData,
+        fulfillmentMessages: [
+          {
+            platform: "Telegram",
+            text: {
+              text: ["Ha sido un gusto poder ayudarte. (✿◠‿◠) ᕗ"],
+            },
+          },
+        ],
+      };
+
+      res.status(200).send(result);
+    }
+  } catch (error) {
+    const result = {
+      fulfillmentText: "Lo siento, La peticion duro mas de 5 segundos.",
+      fulfillmentMessages: [
+        {
+          platform: "Telegram",
+          text: {
+            text: ["Lo siento, La peticion duro mas de 5 segundos."],
+          },
+        },
+      ],
+    };
+
+    res.status(500).send(`Internal Server Error ${error}`);
+    return;
+  }
+});
